@@ -5,15 +5,18 @@
 #include <stdio.h>
 using namespace std;
 
-GLdouble windowWidth, windowHeight, scale = 100, dt = 33, Pi2 = 2*3.14159265;
+GLdouble windowWidth, windowHeight, scale = 100, dt = 4, Pi2 = 2*3.14159265;
 
 class Vector2
 {
 	public:
 		GLdouble x, y;
+		
 		Vector2(GLdouble x, GLdouble y): x(x), y(y) {}
 		
 		GLdouble length() { return sqrt(x*x + y*y); }
+
+		GLdouble length2() { return x*x + y*y; }
 
 		void rotate(GLdouble a)
 		{
@@ -24,8 +27,8 @@ class Vector2
 		
 		Vector2 operator+ (Vector2 v2) { return Vector2(x + v2.x, y + v2.y); }
 		Vector2 operator- (Vector2 v2) { return Vector2(x - v2.x, y - v2.y); }
-		Vector2 operator+= (Vector2 v2) { return Vector2(x + v2.x, y + v2.y); }
-		Vector2 operator-= (Vector2 v2) { return Vector2(x - v2.x, y - v2.y); }
+		Vector2 operator+= (Vector2 v2) { return Vector2(this->x + v2.x, this->y + v2.y); }
+		Vector2 operator-= (Vector2 v2) { return Vector2(this->x - v2.x, this->y - v2.y); }
 
 		GLdouble operator* (Vector2 v2) { return x*v2.x + y*v2.y; }
 
@@ -37,6 +40,8 @@ class Vector2
 		Vector2 operator^ (GLdouble w) { return Vector2(w*y, -w*x); }
 
 		GLdouble operator^ (Vector2 v2) { return x*v2.y - y*v2.x; }
+
+		Vector2 operator- () { return Vector2(-x, -y); }
 };
 
 void drawLine(Vector2 a, Vector2 b)
@@ -63,7 +68,7 @@ class Body
 		GLdouble W, I, angle, m, size;
 		int vertexes_number;
 
-		Body(Vector2 pos, Vector2 velocity, GLdouble m, int vertexes_number, GLdouble size): pos(pos), velocity(velocity), m(m), angle(0), vertexes_number(vertexes_number), size(size), W(0), I(m*m)
+		Body(Vector2 pos, Vector2 velocity, GLdouble m, int vertexes_number, GLdouble size): pos(pos), velocity(velocity), m(m), angle(0), vertexes_number(vertexes_number), size(size), W(frand(0.0005, 0.0008)), I(m*m)
 		{
 			GLdouble da = Pi2 / GLdouble(vertexes_number), a = 0;
 			for (int i = 0; i < vertexes_number; i++)
@@ -90,17 +95,17 @@ class Body
 
 		void apply_impulse(Vector2 point, Vector2 norm, GLdouble impulse)
 		{	
-			velocity += norm * (impulse / m);
-			W += ((norm * impulse) ^ (point - pos)) / I;
+			velocity = velocity*0.98 + norm * (impulse / m);
+			W = W*0.98 + ((norm * impulse) ^ (point - pos)) / I;
 			//printf("v = (%lf, %lf)\n", vx, vy);
 		}
 
 		void rotate(GLdouble a) { for (int i = 0; i < vertexes_number; i++) vertexes[i].rotate(a); }
 
-		void move(GLdouble dt)
+		void move()
 		{
-			rotate(0.01);
-			pos += velocity*dt; angle += W * dt;
+			//printf("%lf\n", velocity);
+			pos = pos + velocity*dt; rotate(W * dt);
 		}
 
 		void draw()
@@ -113,6 +118,18 @@ class Body
 			drawLine(vertexes[0] + pos, vertexes[vertexes_number-1] + pos);
 		}
 };
+
+bool orient(Vector2 a, Vector2 b, Vector2 c)
+{
+	//printf("a = (%lf, %lf), b = (%lf, %lf), c = (%lf, %lf)\n", a.x, a.y, b.x, b.y, c.x, c.y);
+	if (a.x > b.x) return ((b.x - c.x)*(a.y - c.y) - (b.y - c.y) * (a.x - c.x)) >= 0;
+	return ((a.x - c.x)*(b.y - c.y) - (a.y - c.y) * (b.x - c.x)) >= 0;
+}
+
+inline GLdouble sq(GLdouble x)
+{
+	return x*x;
+}
 
 class System
 {
@@ -129,26 +146,80 @@ class System
 			{
 				v = frand(v_min, v_max); v_angle = frand(0, Pi2);	//random velocity and its angle
 				bodies.push_back( Body(pos, Vector2(v*cos(v_angle), v*sin(v_angle)), frand(m_min, m_max), rand()%(vertexes_max-vertexes_min + 1) + vertexes_min, bodies_size) );
-				pos.x += 2*bodies_size; if (pos.x > scale) {pos.y += 2*bodies_size; pos.x = -scale + 2*bodies_size;}	//moving across the grid
+				pos.x += 2.5*bodies_size; if (pos.x > scale) {pos.y += 2*bodies_size; pos.x = -scale + 2*bodies_size;}	//moving across the grid
 			}
 		}
 
 		void draw() { for (int i = 0; i < bodies_number; i++) bodies[i].draw(); }
 
-		void move(GLdouble dt) { for (int i = 0; i < bodies_number; i++) bodies[i].move(dt); }
+		void move() { for (int i = 0; i < bodies_number; i++) bodies[i].move(); }
 
 		void solve_collision(Body &b1, Body &b2)
 		{
+			int i = 0;
+			for (; i < b1.vertexes.size(); i++)
+			{
+				int j = 0;
+				Vector2 c = b1.vertexes[i] + b1.pos;
+				for (; j < b2.vertexes.size()-1; j++)
+					if (orient(b2.vertexes[j] + b2.pos, b2.vertexes[j+1] + b2.pos, c) != orient(b2.vertexes[j] + b2.pos, b2.vertexes[j+1] + b2.pos, b2.pos)) break;
+				
+				if (j == b2.vertexes.size()-1)
+					if (orient(b2.vertexes[j] + b2.pos, b2.vertexes[0] + b2.pos, c) == orient(b2.vertexes[j] + b2.pos, b2.vertexes[0] + b2.pos, b2.pos)) break;
+			}
+			if (i == b1.vertexes.size()) return;
+			Vector2 contact_point = b1.vertexes[i] + b1.pos;
+
+			GLdouble h, h1;
+			Vector2 contact_norm(0, 0);
+			for (int j = 0; j < b2.vertexes.size()-1; j++)
+			{
+				Vector2 a = b2.vertexes[j] + b2.pos, b = b2.vertexes[j+1] + b2.pos;
+				h1 = sqrt((a-contact_point).length2() - sq((b-a)*(contact_point-a)/((b-a).length())));
+				if (h1 < h || !j)
+				{
+					h = h1;
+					//printf("h = %lf\n", h);
+					contact_norm = b-a;
+				}
+			}
+			contact_norm = Vector2(contact_norm.y, -contact_norm.x);
+			contact_norm = contact_norm / contact_norm.length();
+			//printf("contact_norm2 = (%lf, %lf)\n", contact_norm.x, contact_norm.y);
+			//getc(stdin);
 			
+			Vector2 n1 = contact_norm;
+			GLdouble w1 = contact_norm ^ (contact_point - b1.pos);
+			Vector2 n2 = -contact_norm;
+			GLdouble w2 = -(contact_norm ^ (contact_point - b2.pos));
+			GLdouble velocityProjection = n1 * b1.velocity + w1 * b1.W + n2 * b2.velocity + w2 * b2.W;
+
+			if (velocityProjection > 0) return;
+
+			GLdouble a = n1 * b1.velocity + n2 * b2.velocity + w1 * b1.W + w2 * b2.W;
+			GLdouble b = n1 * n1 / b1.m + w1 * w1 / b1.I + n2 * n2 / b2.m + w2 * w2 / b2.I;
+
+			GLdouble lambda = -a / b / 3;
+			if (lambda < 0.5) lambda = 0.5;
+
+			b2.apply_impulse(contact_point, contact_norm, -lambda);
+			b1.apply_impulse(contact_point, contact_norm, lambda);
 		}
 
 		void solve_collisions()
 		{
-			
+			for (int i = 0; i < bodies.size()-1; i++)
+			{
+				for (int j = i+1; j < bodies.size(); j++)
+				{
+					if ( (bodies[i].pos - bodies[j].pos).length() > bodies[i].size + bodies[j].size ) continue;
+					solve_collision(bodies[i], bodies[j]);
+				}
+			}
 		}
 };
 
-System s(10, 20, 10, 10, 0.02, 0.04, 3, 5);
+System s(60, 10, 20, 20, 0.01, 0.02, 3, 5);
 
 void RenderScene(void)
 {
@@ -188,7 +259,7 @@ void ChangeSize(GLsizei w, GLsizei h)	//will be call every time window resizing
 void TimerFunction(int value)
 {
 	s.solve_collisions();
-	s.move(dt);
+	s.move();
 	glutPostRedisplay();
 	glutTimerFunc(dt, TimerFunction, 1);
 }

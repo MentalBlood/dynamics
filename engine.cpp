@@ -63,8 +63,6 @@ GLdouble frand(GLdouble a, GLdouble b)
 	return (b-a)/100*GLdouble(rand()%100) + a;
 }
 
-void set_color(Color& color) { glColor3ub(color.R, color.G, color.B); }
-
 class Body
 {
 	public:
@@ -79,7 +77,7 @@ class Body
 			GLdouble da = Pi2 / GLdouble(vertexes_number), a = 0;
 			for (int i = 0; i < vertexes_number; i++)
 			{
-				vertexes.push_back( Vector2(size*frand(0.8, 1)*cos(a), size*frand(0.8, 1)*sin(a)) );
+				vertexes.push_back( Vector2(size*cos(a), size*sin(a)) );
 				a += da;
 			}
 			
@@ -108,20 +106,7 @@ class Body
 
 		void rotate(GLdouble a) { for (int i = 0; i < vertexes_number; i++) vertexes[i].rotate(a); }
 
-		void move()
-		{
-			pos = pos + velocity*dt; rotate(W * dt);
-		}
-
-		void draw()
-		{
-			for (int i = 0; i < vertexes_number-1; i++)
-			{
-				drawLine(vertexes[i] + pos, vertexes[i+1] + pos, color);
-				glRectf(pos.x-0.4, pos.y-0.4, pos.x+0.4, pos.y+0.4);
-			}
-			drawLine(vertexes[0] + pos, vertexes[vertexes_number-1] + pos, color);
-		}
+		void move() { pos = pos + velocity*dt; rotate(W * dt); }
 };
 
 bool orient(Vector2 &a, Vector2 &b, Vector2 &c)
@@ -135,7 +120,7 @@ inline GLdouble sq(GLdouble x) { return x*x; }
 void gravitate_pair(Body &b1, Body &b2)
 {
 	Vector2 direction = b1.pos - b2.pos;
-	if (direction.length() < 20) return;
+	//if (direction.length() < 10) return;
 	Vector2 dv = direction * (b1.m * b2.m / (sq(direction.length()))) * dt / 4500000;
 	b1.velocity -= dv;
 	b2.velocity += dv;
@@ -144,7 +129,7 @@ void gravitate_pair(Body &b1, Body &b2)
 void reverse_gravitate_pair(Body &b1, Body &b2)
 {
 	Vector2 direction = b1.pos - b2.pos;
-	if (direction.length() < 20) return;
+	//if (direction.length() < 10) return;
 	Vector2 dv = direction * (b1.m * b2.m / (sq(direction.length()))) * dt / 4500000;
 	b1.velocity += dv;
 	b2.velocity -= dv;
@@ -154,50 +139,61 @@ class Color3f
 {
 	public:
 		GLdouble R, G, B;
-		Color3f(GLdouble R, GLdouble G, GLdouble B): R(R), G(G), B(B) {}
 		Color3f(): R(frand(0.1, 1)), G(frand(0.1, 1)), B(frand(0.1, 1)) {}
+		Color3f(GLdouble R, GLdouble G, GLdouble B): R(R), G(G), B(B) {}
 };
 
 class System
 {
 	private:
-		vector<Body> bodies;
-		int bodies_number;
 		bool stoped, reversed_gravitation;
+		Vector2 center;
 
 	public:
-		Vector2 up_left_area_corner, down_right_area_corner;
+		char *name;
+		Vector2 down_left_area_corner, up_right_area_corner;
 		Color3f color;
+		vector<Body> bodies;
 
 		System(	int bodies_number, GLdouble bodies_size_min, GLdouble bodies_size_max, GLdouble m_min, 
 				GLdouble m_max, GLdouble v_min, GLdouble v_max, int vertexes_min, int vertexes_max, 
-				Vector2 up_left_area_corner, Vector2 down_right_area_corner, Color3f color ): 
-			bodies_number(bodies_number), 
-			up_left_area_corner(up_left_area_corner), 
-			down_right_area_corner(down_right_area_corner), 
+				Vector2 down_left_area_corner, Vector2 up_right_area_corner, Color3f color, char *system_name ): 
+			down_left_area_corner(down_left_area_corner), 
+			up_right_area_corner(up_right_area_corner), 
 			color(color),
 			stoped(false),
-			reversed_gravitation(false)
+			reversed_gravitation(false),
+			center((down_left_area_corner + up_right_area_corner)/2)
 		{
+			name = (char*)malloc(sizeof(char)*(strlen(system_name)+1));
+			strcpy(name, system_name);
 			srand(time(0));
 			GLdouble v, v_angle;
-			Vector2 pos(-scale + 2*bodies_size_max, -scale + 2*bodies_size_max);
+			Vector2 pos(down_left_area_corner.x + 2*bodies_size_max, down_left_area_corner.y + 2*bodies_size_max);
 			for (int i = 0; i < bodies_number; i++)	//creating bodies
 			{
 				v = frand(v_min, v_max); v_angle = frand(0, Pi2);	//random velocity and its angle
 				GLdouble m = frand(m_min, m_max);
-				Color body_color;
-				bodies.push_back( Body(	pos, Vector2(v*cos(v_angle), v*sin(v_angle)), m, rand()%(vertexes_max-vertexes_min + 1) + vertexes_min, frand(bodies_size_min, bodies_size_max) * 2*m/(m_min + m_max), body_color) );
-				pos.x += 3*bodies_size_max; if (pos.x > scale) {pos.y += 3*bodies_size_max; pos.x = -scale + 3*bodies_size_max;}	//moving across the grid
+				bodies.push_back( Body(	pos, Vector2(v*cos(v_angle), v*sin(v_angle)), m, rand()%(vertexes_max-vertexes_min + 1) + vertexes_min, frand(bodies_size_min, bodies_size_max) * 2*m/(m_min + m_max), Color()) );
+				pos.x += 2.5*bodies_size_max; if (pos.x + bodies_size_max > up_right_area_corner.x) {pos.y += 2.5*bodies_size_max; pos.x = down_left_area_corner.x + 2*bodies_size_max;}	//moving across the grid
 			}
 		}
 
 		void draw()
 		{
-			for (int i = 0; i < bodies_number; i++) bodies[i].draw();
+			glColor3f(color.R, color.G, color.B);
+			glRectf(down_left_area_corner.x, down_left_area_corner.y, up_right_area_corner.x, up_right_area_corner.y);
+			
+			for (int i = 0; i < bodies.size(); i++)
+			{
+				for (int j = 0; j < bodies[i].vertexes_number-1; j++)
+					drawLine(bodies[i].vertexes[j] + bodies[i].pos, bodies[i].vertexes[j+1] + bodies[i].pos, bodies[i].color);
+				glRectf(bodies[i].pos.x-0.4, bodies[i].pos.y-0.4, bodies[i].pos.x+0.4, bodies[i].pos.y+0.4);
+				drawLine(bodies[i].vertexes[0] + bodies[i].pos, bodies[i].vertexes[bodies[i].vertexes_number-1] + bodies[i].pos, bodies[i].color);
+			}
 		}
 
-		void move() { if (stoped) return; for (int i = 0; i < bodies_number; i++) bodies[i].move(); }	
+		void move_bodies() { if (stoped) return; for (int i = 0; i < bodies.size(); i++) bodies[i].move(); }	
 
 		void solve_collision(Body &b1, Body &b2)
 		{
@@ -270,43 +266,47 @@ class System
 					solve_collision(bodies[i], bodies[j]);
 				}
 
-				bool wall_bounce = false;
+				bool right_bounce = false, left_bounce = false, down_bounce = false, up_bounce = false, bounce = false;
 				for (int j = 0; j < bodies[i].vertexes.size(); j++)
 				{
-					GLdouble d = bodies[i].vertexes[j].x + bodies[i].pos.x - down_right_area_corner.x;
-					if (d > 0)
+					GLdouble d = bodies[i].vertexes[j].x + bodies[i].pos.x - up_right_area_corner.x;
+					if (d > 0 && !right_bounce)
 					{
 						bodies[i].pos.x -= d*1.1;
 						bodies[i].velocity.x *= -1;
-						wall_bounce = true;
+						right_bounce = true;
+						bounce = true;
 						continue;
 					}
-					d = bodies[i].vertexes[j].x + bodies[i].pos.x - up_left_area_corner.x;
-					if (d < 0)
+					d = bodies[i].vertexes[j].x + bodies[i].pos.x - down_left_area_corner.x;
+					if (d < 0 && !left_bounce)
 					{
 						bodies[i].pos.x -= d*1.1;
 						bodies[i].velocity.x *= -1;
-						wall_bounce = true;
+						left_bounce = true;
+						bounce = true;
 						continue;
 					}
-					d = bodies[i].vertexes[j].y + bodies[i].pos.y + up_left_area_corner.y;
-					if (d > 0)
+					d = bodies[i].vertexes[j].y + bodies[i].pos.y - down_left_area_corner.y;
+					if (d < 0 && !down_bounce)
 					{
 						bodies[i].pos.y -= d*1.1;
 						bodies[i].velocity.y *= -1;
-						wall_bounce = true;
+						down_bounce = true;
+						bounce = true;
 						continue;
 					}
-					d = bodies[i].vertexes[j].y + bodies[i].pos.y + down_right_area_corner.y;
-					if (d < 0)
+					d = bodies[i].vertexes[j].y + bodies[i].pos.y - up_right_area_corner.y;
+					if (d > 0 && !up_bounce)
 					{
 						bodies[i].pos.y -= d*1.1;
 						bodies[i].velocity.y *= -1;
-						wall_bounce = true;
+						up_bounce = true;
+						bounce = true;
 						continue;
 					}
 				}
-				if (wall_bounce) bodies[i].W *= -1;
+				if (bounce) bodies[i].W *= -1;
 			}
 		}
 
@@ -334,18 +334,37 @@ class System
 			if (reversed_gravitation) reversed_gravitation = false;
 			else reversed_gravitation = true;
 		}
+		void move_x(GLdouble dx)
+		{
+			for (int i = 0; i < bodies.size(); i++) bodies[i].pos.x += dx;
+			down_left_area_corner.x += dx;
+			up_right_area_corner.x += dx;
+		}
+		void move_y(GLdouble dy)
+		{
+			for (int i = 0; i < bodies.size(); i++) bodies[i].pos.y += dy;
+			down_left_area_corner.y += dy;
+			up_right_area_corner.y += dy;
+		}
 };
 
 vector<System> systems;
+int active_system_index = -1;
 
 void RenderScene(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT);
 	for (int i = 0; i < systems.size(); i++)
 	{
-		glColor3f(systems[i].color.R, systems[i].color.G, systems[i].color.B);
-		glRectf(systems[i].up_left_area_corner.x, systems[i].up_left_area_corner.y, systems[i].down_right_area_corner.x, systems[i].down_right_area_corner.y);
 		systems[i].draw();
+		if (active_system_index == i)
+		{
+			Color inverted_system_background_color(255 - systems[i].color.R, 255 - systems[i].color.G, 255 - systems[i].color.B);
+			drawLine(systems[i].down_left_area_corner, Vector2(systems[i].up_right_area_corner.x, systems[i].down_left_area_corner.y), inverted_system_background_color);
+			drawLine(systems[i].down_left_area_corner, Vector2(systems[i].down_left_area_corner.x, systems[i].up_right_area_corner.y), inverted_system_background_color);
+			drawLine(systems[i].up_right_area_corner, Vector2(systems[i].up_right_area_corner.x, systems[i].down_left_area_corner.y), inverted_system_background_color);
+			drawLine(systems[i].up_right_area_corner, Vector2(systems[i].down_left_area_corner.x, systems[i].up_right_area_corner.y), inverted_system_background_color);
+		}
 	}
 	glutSwapBuffers();
 }
@@ -385,7 +404,7 @@ void TimerFunction(int value)
 	{
 		systems[i].solve_collisions();
 		systems[i].gravitate();
-		systems[i].move();
+		systems[i].move_bodies();
 	}
 	glutPostRedisplay();
 	glutTimerFunc(dt, TimerFunction, 1);

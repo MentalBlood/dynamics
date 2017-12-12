@@ -1,6 +1,7 @@
 #include <GL/freeglut.h>
 #include <math.h>
 #include <time.h>
+#include <string.h>
 #include <vector>
 #include <stdio.h>
 using namespace std;
@@ -21,7 +22,8 @@ int main(int argc, char **argv)
 	glutTimerFunc(dt, TimerFunction, 1);
 	SetupRC();
 	glutKeyboardFunc(key);
-	setup_keys();
+	char keys_file[] = "keys.txt";
+	setup_keys(keys_file);
 	glutMainLoop();
 	return 0;
 }

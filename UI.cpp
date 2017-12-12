@@ -23,6 +23,61 @@ GLdouble get_double(GLdouble& min, GLdouble& max)
 	return GLdouble(strtod(s, NULL));
 }
 
+int get_int(int min, int max)
+{
+	char s[16];
+	int a = 0;
+	while (1)
+	{
+		scanf("%16s", s);
+		char *c = s;
+		for (; *c; c++)
+		{
+			a *= 10;
+			if (*c == '0') continue;
+			switch (*c)
+			{
+				case '1':
+					++a;
+					break;
+				case '2':
+					a += 2;
+					break;
+				case '3':
+					a += 3;
+					break;
+				case '4':
+					a += 4;
+					break;
+				case'5':
+					a += 5;
+					break;
+				case '6':
+					a += 6;
+					break;
+				case '7':
+					a += 7;
+					break;
+				case '8':
+					a += 8;
+					break;
+				case '9':
+					a += 9;
+					break;
+				case 0:
+					return a;
+				default:
+					printf("Enter a valid integer number: ");
+			}
+			if (a < min || a > max)
+			{
+				printf("This number is out of range [%d, %d], enter a valid one: ", min, max);
+				break;
+			}
+		}
+	}
+}
+
 GLdouble input(const char *question, GLdouble default_answer, GLdouble input_for_default_answer, GLdouble min, GLdouble max)
 {
 	GLdouble answer;
@@ -58,26 +113,55 @@ void setup_new_system()
 	background_color.G = input("Green (default is 0.1): ", 0.1, -1, 0, 1);
 	background_color.B = input("Blue (default is 0.1): ", 0.1, -1, 0, 1);
 
+	char system_name[128];
+	printf("Give a name for this system (maximum 127 symbols): "); scanf("%128s", system_name);
+
 	systems.push_back( System(	bodies_number, min_size, max_size, min_m, max_m, min_v, max_v, min_vertexes_number, 
-								max_vertexes_number, up_left_area_corner, down_right_area_corner, background_color) );
+								max_vertexes_number, up_left_area_corner, down_right_area_corner, background_color, system_name));
 }
 
 void UI()
 {
 	char c;
+	int choice;
+	char demo_name[] = "Demo";
+UI_BEGIN:
 	printf("1 - Default configuration\n2 - Custom configuration\n");
 	while (1)
 	{
-		c = getc(stdin);
+		scanf("%c", &c);
 		switch (c)
 		{
 			case '1':
-				systems.push_back( System(70, 3, 8, 20, 20, 0.05, 0.11, 4, 15, Vector2(-scale, -scale), Vector2(scale, scale), Color3f(0.1, 0.1, 0.1)) );
+				systems.push_back( System(70, 3, 8, 20, 20, 0.05, 0.11, 4, 15, Vector2(-scale, -scale), Vector2(scale, scale), Color3f(0.1, 0.1, 0.1), demo_name) );
 				return;
-				break;
 			case '2':
 				setup_new_system();
-				return;
+				printf("1 - Start\n2 - Add one more\n3 - Remove");
+				while (1)
+				{
+					scanf("%c", &c);
+					switch (c)
+					{
+						case '1':
+							return;
+						case '2':
+							setup_new_system();
+							break;
+						case '3':
+							for (int i = 0; i < systems.size(); i++)
+								printf("%d - system \"%s\" with %d bodies\n", i+1, systems[i].name, systems[i].bodies.size());
+							printf("0 - Remove all\n");
+							choice = get_int(0, systems.size());
+							if (!choice)
+								while (!systems.empty()) systems.pop_back();
+							else systems.erase(systems.begin() + --choice);
+							goto UI_BEGIN;
+							break;
+						default:
+							printf("Wrong input\n");
+					}
+				}
 			default:
 				printf("Wrong input\n");
 		}

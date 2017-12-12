@@ -1,0 +1,13 @@
+next_system 106
+previous_system 59
+stop_unstop_active 32
+reverse_velocities_active 114
+reverse_velocities_active 82
+reverse_gravitation_active 103
+reverse_gravitation_active 81
+move_up_active 119
+move_down_active 115
+move_left_active 97
+move_right_active 100
+move_forward 107
+move_backward 108

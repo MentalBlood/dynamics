@@ -11,3 +11,7 @@ move_left_active 97
 move_right_active 100
 move_forward 107
 move_backward 108
+increase_size_x_active 68
+decrease_size_x_active 65
+increase_size_y_active 83
+decrease_size_y_active 87

@@ -101,11 +101,11 @@ void setup_new_system()
 	max_vertexes_number = input("Maximum vertexes number (default is 15): ", 15, -1, min_vertexes_number, 30);
 	
 	printf("Set rectagular area where system may act:\n");
-	Vector2 up_left_area_corner, down_right_area_corner;
-	up_left_area_corner.x = input("Up left area corner x (default is -100): ", -100, -1, -scale, scale*3);
-	up_left_area_corner.y = input("Up left area corner y (default is -100): ", -100, -1, -scale, scale-1);
-	down_right_area_corner.x = input("Down right area corner x (default is 100): ", 100, -1, up_left_area_corner.x+1, scale*3);
-	down_right_area_corner.y = input("Down right area corner y (default is 100): ", 100, -1, up_left_area_corner.y+1, scale-1);
+	Vector2 down_left_area_corner, up_right_area_corner;
+	down_left_area_corner.x = input("Up left area corner x (default is -100): ", -100, -1, -3*scale, scale*3);
+	down_left_area_corner.y = input("Up left area corner y (default is -100): ", -100, -1, -scale, scale-20);
+	up_right_area_corner.x = input("Down right area corner x (default is 100): ", 100, -1, down_left_area_corner.x+10, scale*3);
+	up_right_area_corner.y = input("Down right area corner y (default is 100): ", 100, -1, down_left_area_corner.y+10, scale);
 
 	printf("Set background (area) color by three numbers from 0.0 to 1.0:\n");
 	Color3f background_color;
@@ -117,7 +117,7 @@ void setup_new_system()
 	printf("Give a name for this system (maximum 127 symbols): "); scanf("%128s", system_name);
 
 	systems.push_back( System(	bodies_number, min_size, max_size, min_m, max_m, min_v, max_v, min_vertexes_number, 
-								max_vertexes_number, up_left_area_corner, down_right_area_corner, background_color, system_name));
+								max_vertexes_number, down_left_area_corner, up_right_area_corner, background_color, system_name));
 }
 
 void UI()

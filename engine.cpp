@@ -69,32 +69,34 @@ class Body
 		Vector2 velocity, pos;
 		vector<Vector2> vertexes;
 		GLdouble W, I, angle, m, size;
-		int vertexes_number;
 		Color color;
 
-		Body(Vector2 pos, Vector2 velocity, GLdouble m, int vertexes_number, GLdouble size, Color color): pos(pos), velocity(velocity), m(m), angle(0), vertexes_number(vertexes_number), size(size), W(frand(0.0005, 0.0008)), color(color), I(m*m)
+		Body(Vector2 pos, Vector2 velocity, GLdouble m, int vertexes_number, GLdouble size, Color color):
+			pos(pos), velocity(velocity), m(m), angle(0), size(size), W(frand(0.0005, 0.0008)), color(color), I(m*m)
 		{
-			GLdouble da = Pi2 / GLdouble(vertexes_number), a = 0;
+			GLdouble alpha = Pi2 / GLdouble(vertexes_number), rotation = 0, r;
+			GLdouble min_size = size*cos(alpha);
 			for (int i = 0; i < vertexes_number; i++)
 			{
-				vertexes.push_back( Vector2(size*cos(a), size*sin(a)) );
-				a += da;
+				r = frand(min_size, size);
+				vertexes.push_back( Vector2(r*cos(rotation), r*sin(rotation)) );
+				rotation += alpha;
 			}
 			
 			GLdouble A = 0, D;
 			Vector2 mass_center;
-			for (int i = 0; i < vertexes_number-1; i++)
+			for (int i = 0; i < vertexes.size()-1; i++)
 			{
 				D = vertexes[i] ^ vertexes[i+1];
 				mass_center += (vertexes[i] + vertexes[i+1]) * D;
 				A += D;
 			}
-			D = vertexes[vertexes_number-1] ^ vertexes[0];
-			mass_center += (vertexes[vertexes_number-1] + vertexes[0]) * D;
+			D = vertexes[vertexes.size()-1] ^ vertexes[0];
+			mass_center += (vertexes[vertexes.size()-1] + vertexes[0]) * D;
 			A += D;
 
 			mass_center /= 3*A;
-			for (int i = 0; i < vertexes_number; i++) vertexes[i] -= mass_center;
+			for (int i = 0; i < vertexes.size(); i++) vertexes[i] -= mass_center;
 		}
 
 		void apply_impulse(Vector2 point, Vector2 norm, GLdouble impulse)
@@ -104,7 +106,7 @@ class Body
 			W *= 0.9;
 		}
 
-		void rotate(GLdouble a) { for (int i = 0; i < vertexes_number; i++) vertexes[i].rotate(a); }
+		void rotate(GLdouble a) { for (int i = 0; i < vertexes.size(); i++) vertexes[i].rotate(a); }
 
 		void move() { pos = pos + velocity*dt; rotate(W * dt); }
 };
@@ -186,10 +188,10 @@ class System
 			
 			for (int i = 0; i < bodies.size(); i++)
 			{
-				for (int j = 0; j < bodies[i].vertexes_number-1; j++)
+				for (int j = 0; j < bodies[i].vertexes.size()-1; j++)
 					drawLine(bodies[i].vertexes[j] + bodies[i].pos, bodies[i].vertexes[j+1] + bodies[i].pos, bodies[i].color);
 				glRectf(bodies[i].pos.x-0.4, bodies[i].pos.y-0.4, bodies[i].pos.x+0.4, bodies[i].pos.y+0.4);
-				drawLine(bodies[i].vertexes[0] + bodies[i].pos, bodies[i].vertexes[bodies[i].vertexes_number-1] + bodies[i].pos, bodies[i].color);
+				drawLine(bodies[i].vertexes[0] + bodies[i].pos, bodies[i].vertexes[bodies[i].vertexes.size()-1] + bodies[i].pos, bodies[i].color);
 			}
 		}
 
@@ -346,6 +348,8 @@ class System
 			down_left_area_corner.y += dy;
 			up_right_area_corner.y += dy;
 		}
+		void change_window_size_x(GLdouble dx) { up_right_area_corner.x += dx; }
+		void change_window_size_y(GLdouble dy) { down_left_area_corner.y += dy; }
 };
 
 vector<System> systems;

@@ -76,6 +76,7 @@ class Body
 		{
 			GLdouble alpha = Pi2 / GLdouble(vertexes_number), rotation = 0, r;
 			GLdouble min_size = size*cos(alpha);
+			if (min_size < size/2) min_size = size/2;
 			for (int i = 0; i < vertexes_number; i++)
 			{
 				r = frand(min_size, size);

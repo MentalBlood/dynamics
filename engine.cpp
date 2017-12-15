@@ -237,13 +237,10 @@ class System
 				GLdouble w1 = contact_norm ^ (contact_point - b1.pos);
 				Vector2 n2 = -contact_norm;
 				GLdouble w2 = -(contact_norm ^ (contact_point - b2.pos));
-				GLdouble velocityProjection = n1 * b1.velocity + w1 * b1.W + n2 * b2.velocity + w2 * b2.W;
 
 				b1.pos += contact_norm*h / 1.9;
 				b2.pos -= contact_norm*h / 1.9;
 				
-				if (velocityProjection > 0) continue;
-
 				GLdouble initialVelocityProjection = n1 * b1.velocity + w1 * b1.W + n2 * b2.velocity + w2 * b2.W;
 				GLdouble B = n1 * n1 / b1.m + w1 * w1 / b1.I + n2 * n2 / b2.m + w2 * w2 / b2.I;
 				GLdouble bounce = -1;
